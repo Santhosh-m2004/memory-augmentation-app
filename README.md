@@ -11,6 +11,8 @@ AI Memory Augmentation is a full-stack project designed to help users upload and
 
 This project combines **React** (Frontend) with **Flask** (Backend) and uses multiple AI tools for processing.
 
+---
+
 ## Features
 
 - Upload audio/video files.
@@ -23,6 +25,7 @@ This project combines **React** (Frontend) with **Flask** (Backend) and uses mul
 - Delete memories.
 - Full-stack application with **React + Flask**.
 
+---
 
 ## Tech Stack
 
@@ -45,9 +48,11 @@ This project combines **React** (Frontend) with **Flask** (Backend) and uses mul
 - Video Processing: OpenCV
 - Audio Analysis: Librosa
 
+---
 
 ## Folder Structure
 
+```
 memory-augmentation-app/
 ├── backend/
 │   ├── app.py                   # Flask API server
@@ -77,17 +82,19 @@ memory-augmentation-app/
 
 - Navigate to backend folder:
 
+```bash
 cd backend
+```
 
 - Install dependencies:
 
-```
+```bash
 pip install -r requirements.txt
 ```
 
 - Start Flask server:
 
-```
+```bash
 python app.py
 ```
 
@@ -95,19 +102,19 @@ python app.py
 
 - Navigate to frontend folder:
 
-```
+```bash
 cd frontend
 ```
 
 - Install dependencies:
 
-```
+```bash
 npm install
 ```
 
 - Start React app:
 
-```
+```bash
 npm start
 ```
 
