@@ -44,7 +44,6 @@ This project combines **React** (Frontend) with **Flask** (Backend) and uses mul
 ### AI Processing
 
 - Transcription: OpenAI Whisper
-- Translation: Google Translate API
 - Video Processing: OpenCV
 - Audio Analysis: Librosa
 
@@ -55,23 +54,23 @@ This project combines **React** (Frontend) with **Flask** (Backend) and uses mul
 ```
 memory-augmentation-app/
 ├── backend/
-│   ├── app.py                   # Flask API server
+│   ├── app.py                   
 │   ├── memory_processor/
-│   │   ├── audio_transcriber.py  # Transcription logic
-│   │   ├── frame_extractor.py    # Keyframe extraction logic
-│   │   ├── memory_store.py       # MongoDB interaction
+│   │   ├── audio_transcriber.py  
+│   │   ├── frame_extractor.py   
+│   │   ├── memory_store.py       
 │
 ├── frontend/
 │   ├── src/
-│   │   ├── App.js                 # Main app file
-│   │   ├── api.js                  # API calls to backend
-│   │   ├── MemoryUploader.js       # Upload component
-│   │   ├── MemorySearch.js         # Search and display component
+│   │   ├── App.js                
+│   │   ├── api.js                  
+│   │   ├── MemoryUploader.js       
+│   │   ├── MemorySearch.js         
 │
-├── uploads/ (ignored in .gitignore)
-├── frames/ (ignored in .gitignore)
+├── uploads/ 
+├── frames/ 
 ├── .gitignore
-├── README.md (this file)
+├── README.md 
 ```
 
 ---
