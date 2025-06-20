@@ -20,5 +20,4 @@ This project is designed to enhance memory augmentation through AI-powered tools
 
 ---
 
-## 📂 Folder Structure Example
 
