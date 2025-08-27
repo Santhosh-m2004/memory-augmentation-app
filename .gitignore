@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+*.pyo
+*.pyd
+*.sqlite3
+*.db
+
+# Virtual environment
+.venv/
+env/
+venv/
+ENV/
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Backend uploads
+backend/uploads/
+
+# Node / frontend
+frontend/node_modules/
+frontend/build/
+frontend/dist/
+frontend/.env
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+
+# Environment files
+.env
+
+# Images if generated
+images/
