@@ -43,3 +43,4 @@ frontend/yarn-error.log*
 
 # Images if generated
 images/
+backend/frames
