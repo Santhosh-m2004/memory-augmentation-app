@@ -1,4 +1,3 @@
-//requirements.txt
 Flask
 flask-cors
 pymongo
@@ -9,3 +8,5 @@ nltk
 librosa
 torch
 torchaudio
+requests
+googletrans

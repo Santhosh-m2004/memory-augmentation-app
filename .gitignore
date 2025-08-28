@@ -1,30 +1,5 @@
-# Python
-__pycache__/
-*.py[cod]
-*.pyo
-*.pyd
-*.pyc
-*.pyo
-*.pyd
-*.sqlite3
-*.db
 
-# Virtual environment
 .venv/
-env/
-venv/
-ENV/
-
-# VS Code
-.vscode/
-*.code-workspace
-
-# Logs
-*.log
-
-# OS files
-.DS_Store
-Thumbs.db
 
 # Backend uploads
 backend/uploads/

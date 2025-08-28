@@ -5,7 +5,9 @@ from datetime import datetime
 from memory_processor.audio_transcriber import transcribe_audio
 from memory_processor.frame_extractor import extract_keyframes
 from memory_processor.memory_store import save_memory, search_memory, get_all_memories, delete_memory
+from memory_processor.summarizer import summarize_content
 import threading
+import requests
 
 app = Flask(__name__)
 CORS(app)
@@ -25,6 +27,11 @@ def process_memory_async(filepath, filename):
         
         # Transcribe (auto-detect language + translate to English)
         transcript = transcribe_audio(filepath)
+        PROCESSING_STATUS[filename] = {"status": "processing", "progress": 50, "message": "Summarizing content..."}
+        
+        # Generate summary using OpenAI
+        summary = summarize_content(transcript)
+        
         PROCESSING_STATUS[filename] = {"status": "processing", "progress": 60, "message": "Extracting keyframes..."}
         
         # Extract keyframes
@@ -32,8 +39,8 @@ def process_memory_async(filepath, filename):
         frame_filenames = [os.path.basename(frame) for frame in keyframes]
         PROCESSING_STATUS[filename] = {"status": "processing", "progress": 80, "message": "Saving to database..."}
 
-        # Save memory (transcript is already in English)
-        memory_id = save_memory(filepath, transcript, frame_filenames)
+        # Save memory (transcript, summary, and keyframes)
+        memory_id = save_memory(filepath, transcript, summary, frame_filenames)
         
         PROCESSING_STATUS[filename] = {
             "status": "completed", 

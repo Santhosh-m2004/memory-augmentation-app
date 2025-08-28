@@ -16,7 +16,7 @@ collection.create_index("upload_date")
 # Translator setup
 translator = Translator()
 
-def save_memory(filepath, transcript, keyframes):
+def save_memory(filepath, transcript, summary, keyframes):
     """
     Save a memory into the database.
     Automatically translates transcript into English and stores both original and translated versions.
@@ -41,6 +41,7 @@ def save_memory(filepath, transcript, keyframes):
         "filename": filename,
         "filepath": filepath,
         "transcript": transcript,
+        "summary": summary,
         "translated_transcript": translated_transcript,
         "detected_language": detected_language,
         "keyframes": keyframes,
@@ -69,7 +70,8 @@ def search_memory(query):
         results = collection.find({
             "$or": [
                 {"transcript": {"$regex": query, "$options": "i"}},
-                {"translated_transcript": {"$regex": query, "$options": "i"}}
+                {"translated_transcript": {"$regex": query, "$options": "i"}},
+                {"summary": {"$regex": query, "$options": "i"}}
             ]
         }).sort("upload_date", -1)
 
@@ -79,7 +81,7 @@ def search_memory(query):
         # Calculate relevance score for display
         if 'score' not in memory:
             # Simple relevance calculation based on query occurrence
-            text = f"{memory.get('transcript', '')} {memory.get('translated_transcript', '')}"
+            text = f"{memory.get('transcript', '')} {memory.get('translated_transcript', '')} {memory.get('summary', '')}"
             memory['relevance'] = text.lower().count(query.lower()) / len(text) * 100 if text else 0
         memories.append(memory)
 

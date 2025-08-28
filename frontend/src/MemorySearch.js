@@ -613,6 +613,15 @@ function MemorySearch() {
       padding: '3rem',
       color: '#a0a0e0',
     },
+                modalSummary: {
+                background: 'rgba(65, 105, 225, 0.1)',
+                padding: '1.5rem',
+                borderRadius: '8px',
+                marginBottom: '1.5rem',
+                lineHeight: '1.6',
+                color: '#c0c0e0',
+                borderLeft: '4px solid #4169e1',
+                }
   };
 
   // Function to get a flag emoji based on language (simplified)
@@ -797,6 +806,17 @@ function MemorySearch() {
               <div style={styles.modalTranscript}>
                 {selectedMemory.translated_transcript || selectedMemory.transcript || 'No transcript available'}
               </div>
+
+                {selectedMemory.summary && (
+                <>
+                    <h3>AI Summary</h3>
+                    <div style={styles.modalSummary}>
+                    {selectedMemory.summary}
+                    </div>
+                </>
+                )}
+
+                
               
               {selectedMemory.keyframes && selectedMemory.keyframes.length > 0 && (
                 <>
