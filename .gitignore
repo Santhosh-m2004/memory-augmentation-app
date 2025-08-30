@@ -16,6 +16,5 @@ frontend/yarn-error.log*
 # Environment files
 .env
 
-# Images if generated
-images/
+
 backend/frames
