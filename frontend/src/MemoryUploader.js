@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { uploadMemory, getProcessingStatus } from './api';
+import { useAuth } from './AuthContext';
 
 function MemoryUploader({ setMemoryCount, onUploadComplete }) {
     const [file, setFile] = useState(null);
@@ -12,41 +13,34 @@ function MemoryUploader({ setMemoryCount, onUploadComplete }) {
     const [uploadId, setUploadId] = useState(null);
     const fileInputRef = useRef(null);
     const pollingRef = useRef(null);
+    const { token } = useAuth();
 
     // Clean up polling on unmount
     useEffect(() => {
         return () => {
-            if (pollingRef.current) clearTimeout(pollingRef.current);
+            if (pollingRef.current) {
+                clearTimeout(pollingRef.current);
+            }
         };
     }, []);
-
-    const resetUploader = () => {
-        setFile(null);
-        setProcessing(false);
-        setLoading(false);
-        setProgress(0);
-        setStatusMessage('');
-        setUploadId(null);
-        if (fileInputRef.current) fileInputRef.current.value = '';
-    };
 
     const handleFileChange = (e) => {
         const selectedFile = e.target.files[0];
         if (!selectedFile) return;
-
+        
         // Validate file type
         const allowedTypes = ['audio/', 'video/'];
         if (!allowedTypes.some(type => selectedFile.type.includes(type))) {
             setError('Please select an audio or video file');
             return;
         }
-
+        
         // Validate file size (max 100MB)
         if (selectedFile.size > 100 * 1024 * 1024) {
             setError('File size must be less than 100MB');
             return;
         }
-
+        
         setFile(selectedFile);
         setError('');
         setMessage('');
@@ -61,17 +55,23 @@ function MemoryUploader({ setMemoryCount, onUploadComplete }) {
             return;
         }
 
+        if (!token) {
+            setError('Please login to upload memories');
+            return;
+        }
+
         setLoading(true);
         try {
-            const result = await uploadMemory(file);
+            const result = await uploadMemory(file, token);
             setMessage('Upload started. Processing in progress...');
             setProcessing(true);
             setProgress(10);
             setStatusMessage('File uploaded, starting processing...');
             setUploadId(result.filename);
-
+            
+            // Start polling for processing status
             startPolling(result.filename);
-
+            
         } catch (err) {
             setError(err.message || 'Failed to upload memory. Please try again.');
             setLoading(false);
@@ -79,56 +79,51 @@ function MemoryUploader({ setMemoryCount, onUploadComplete }) {
     };
 
     const startPolling = (filename) => {
-        let retries = 0;
         const checkStatus = async () => {
-            if (retries > 40) { // Max 80 seconds
-                setError('Processing timed out.');
-                setProcessing(false);
-                setLoading(false);
-                return;
-            }
-            retries++;
-
             try {
-                const status = await getProcessingStatus(filename);
-                setProgress(status.progress || 0);
-                setStatusMessage(status.message || '');
-
-                if (status.status === 'processing' || status.status === 'queued') {
-                    pollingRef.current = setTimeout(checkStatus, 2000);
-                } else if (status.status === 'completed' || status.status === 'done') {
-                    if (pollingRef.current) clearTimeout(pollingRef.current);
+                const status = await getProcessingStatus(filename, token);
+                setProgress(status.progress);
+                setStatusMessage(status.message);
+                
+                if (status.status === 'processing') {
+                    // Continue polling
+                    pollingRef.current = setTimeout(() => checkStatus(), 2000);
+                } else if (status.status === 'completed') {
                     setMessage('Memory processed and stored successfully!');
                     setProcessing(false);
-                    setLoading(false);
                     setMemoryCount(prev => prev + 1);
                     if (onUploadComplete) onUploadComplete();
-
-                    // Show success for 2 seconds, then reset
-                    setTimeout(() => {
-                        resetUploader();
-                    }, 2000);
+                    // Reset form
+                    setFile(null);
+                    if (fileInputRef.current) {
+                        fileInputRef.current.value = '';
+                    }
                 } else if (status.status === 'error') {
-                    if (pollingRef.current) clearTimeout(pollingRef.current);
                     setError(status.message || 'Processing failed');
                     setProcessing(false);
-                    setLoading(false);
+                } else if (status.status === 'queued') {
+                    // Still queued, continue polling
+                    pollingRef.current = setTimeout(() => checkStatus(), 2000);
                 }
             } catch (err) {
                 console.error('Status check error:', err);
                 setError('Failed to check processing status. The server might be busy.');
                 setProcessing(false);
-                setLoading(false);
             }
         };
-
-        pollingRef.current = setTimeout(checkStatus, 2000);
+        
+        // Start the polling
+        pollingRef.current = setTimeout(() => checkStatus(), 2000);
     };
 
     const cancelUpload = () => {
-        if (pollingRef.current) clearTimeout(pollingRef.current);
-        resetUploader();
+        if (pollingRef.current) {
+            clearTimeout(pollingRef.current);
+        }
+        setProcessing(false);
+        setLoading(false);
         setMessage('Upload cancelled');
+        setProgress(0);
     };
 
     const styles = {
@@ -202,7 +197,7 @@ function MemoryUploader({ setMemoryCount, onUploadComplete }) {
             marginTop: '1rem',
         },
         buttonDisabled: {
-            backgroundColor: '#666',
+            opacity: 0.6,
             cursor: 'not-allowed',
         },
         cancelButton: {
@@ -267,9 +262,9 @@ function MemoryUploader({ setMemoryCount, onUploadComplete }) {
     return (
         <div style={styles.container}>
             <h2 style={styles.title}>Upload New Memory</h2>
-
-            <div
-                style={{ ...styles.dropZone, ...(file ? styles.dropZoneActive : {}) }}
+            
+            <div 
+                style={{...styles.dropZone, ...(file ? styles.dropZoneActive : {})}}
                 onClick={() => fileInputRef.current?.click()}
                 onDragOver={(e) => {
                     e.preventDefault();
@@ -292,9 +287,9 @@ function MemoryUploader({ setMemoryCount, onUploadComplete }) {
                 <p style={{ fontSize: '0.9rem', color: '#a0a0e0', marginTop: '0.5rem' }}>
                     Supported formats: MP3, WAV, MP4, MOV, AVI, MKV
                 </p>
-                <button style={{
-                    marginTop: '1rem',
-                    background: 'rgba(138, 127, 255, 0.2)',
+                <button style={{ 
+                    marginTop: '1rem', 
+                    background: 'rgba(138, 127, 255, 0.2)', 
                     border: '1px solid rgba(138, 127, 255, 0.5)',
                     color: '#e0e0ff',
                     padding: '0.5rem 1rem',
@@ -304,7 +299,7 @@ function MemoryUploader({ setMemoryCount, onUploadComplete }) {
                     Browse Files
                 </button>
             </div>
-
+            
             <input
                 type="file"
                 ref={fileInputRef}
@@ -312,15 +307,17 @@ function MemoryUploader({ setMemoryCount, onUploadComplete }) {
                 style={styles.fileInput}
                 accept="audio/*,video/*"
             />
-
+            
             {file && (
                 <div style={styles.fileInfo}>
                     <div style={styles.fileName}>{file.name}</div>
-                    <button
+                    <button 
                         style={styles.removeButton}
                         onClick={() => {
                             setFile(null);
-                            if (fileInputRef.current) fileInputRef.current.value = '';
+                            if (fileInputRef.current) {
+                                fileInputRef.current.value = '';
+                            }
                         }}
                         disabled={processing}
                     >
@@ -328,13 +325,13 @@ function MemoryUploader({ setMemoryCount, onUploadComplete }) {
                     </button>
                 </div>
             )}
-
+            
             <button
                 onClick={handleUpload}
-                disabled={loading || !file || processing}
+                disabled={loading || !file || processing || !token}
                 style={{
                     ...styles.button,
-                    ...((loading || !file || processing) && styles.buttonDisabled)
+                    ...((loading || !file || processing || !token) && styles.buttonDisabled)
                 }}
             >
                 {processing ? 'Processing...' : (loading ? 'Uploading...' : 'Upload Memory')}
@@ -348,31 +345,31 @@ function MemoryUploader({ setMemoryCount, onUploadComplete }) {
                     Cancel Upload
                 </button>
             )}
-
+            
             {(processing || progress > 0) && (
                 <div style={styles.progressContainer}>
                     <div style={styles.progressBar}>
-                        <div style={{ ...styles.progressFill, width: `${progress}%` }}></div>
+                        <div style={{...styles.progressFill, width: `${progress}%`}}></div>
                     </div>
                     <div style={styles.progressText}>
                         {statusMessage} ({Math.round(progress)}%)
                     </div>
                 </div>
             )}
-
+            
             {message && (
-                <div style={{ ...styles.statusContainer, ...styles.successMessage }}>
+                <div style={{...styles.statusContainer, ...styles.successMessage}}>
                     {message}
                     {uploadId && <div style={styles.uploadId}>ID: {uploadId}</div>}
                 </div>
             )}
             {error && (
-                <div style={{ ...styles.statusContainer, ...styles.errorMessage }}>
+                <div style={{...styles.statusContainer, ...styles.errorMessage}}>
                     {error}
                 </div>
             )}
             {processing && !error && (
-                <div style={{ ...styles.statusContainer, ...styles.processingMessage }}>
+                <div style={{...styles.statusContainer, ...styles.processingMessage}}>
                     Processing your memory... This may take a few minutes for large files.
                 </div>
             )}

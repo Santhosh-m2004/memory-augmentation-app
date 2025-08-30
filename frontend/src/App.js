@@ -1,17 +1,20 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from './AuthContext';
+import LoginForm from './LoginForm';
+import RegisterForm from './RegisterForm';
 import MemoryUploader from './MemoryUploader';
 import MemorySearch from './MemorySearch';
-import { getMemoryStats, getHealthStatus } from './api';
+import { getMemoryStats } from './api';
 
-function App() {
+function AppContent() {
     const [view, setView] = useState('upload');
     const [isHovered, setIsHovered] = useState(null);
     const [memoryCount, setMemoryCount] = useState(0);
     const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString());
-    const [systemStatus, setSystemStatus] = useState('checking');
     const [stats, setStats] = useState({ total: 0, totalDuration: 0, languages: [] });
+    const [showAuthForm, setShowAuthForm] = useState('login');
+    const { user, token, logout } = useAuth();
 
-    // Update time every second
     useEffect(() => {
         const interval = setInterval(() => {
             setCurrentTime(new Date().toLocaleTimeString());
@@ -19,32 +22,29 @@ function App() {
         return () => clearInterval(interval);
     }, []);
 
-    // Check system status on load
     useEffect(() => {
-        const checkStatus = async () => {
-            try {
-                await getHealthStatus();
-                setSystemStatus('online');
-                
-                // Load initial stats
-                const statsData = await getMemoryStats();
-                setStats(statsData);
-                setMemoryCount(statsData.total);
-            } catch (err) {
-                setSystemStatus('offline');
-                console.error('Health check failed:', err);
+        const loadStats = async () => {
+            if (token) {
+                try {
+                    const statsData = await getMemoryStats(token);
+                    setStats(statsData);
+                    setMemoryCount(statsData.total);
+                } catch (error) {
+                    console.error('Failed to load stats:', error);
+                }
             }
         };
         
-        checkStatus();
-    }, []);
+        loadStats();
+    }, [token]);
 
     const handleUploadComplete = () => {
-        // Refresh stats when a new memory is uploaded
-        getMemoryStats().then(statsData => {
-            setStats(statsData);
-            setMemoryCount(statsData.total);
-        });
+        if (token) {
+            getMemoryStats(token).then(statsData => {
+                setStats(statsData);
+                setMemoryCount(statsData.total);
+            });
+        }
     };
 
     const formatDuration = (seconds) => {
@@ -131,6 +131,34 @@ function App() {
             fontSize: '1.2rem',
             color: '#a0a0e0',
             fontWeight: '300',
+        },
+        userInfo: {
+            position: 'absolute',
+            top: '20px',
+            right: '20px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '1rem',
+            zIndex: 3,
+        },
+        userName: {
+            color: '#e0e0ff',
+            fontSize: '0.9rem',
+        },
+        logoutButton: {
+            background: 'rgba(255, 100, 100, 0.2)',
+            color: '#ff6464',
+            border: '1px solid rgba(255, 100, 100, 0.3)',
+            padding: '0.5rem 1rem',
+            borderRadius: '6px',
+            cursor: 'pointer',
+            fontSize: '0.8rem',
+        },
+        authContainer: {
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            minHeight: '80vh',
         },
         dashboard: {
             display: 'flex',
@@ -332,22 +360,48 @@ function App() {
         }
     };
 
+    if (!user) {
+        return (
+            <div style={styles.container}>
+                <div style={styles.bubble1}></div>
+                <div style={styles.bubble2}></div>
+                <div style={styles.bubble3}></div>
+
+                <header style={styles.header}>
+                    <h1 style={styles.title}>NeuroSync <span style={styles.betaTag}>BETA</span></h1>
+                    <p style={styles.subtitle}>Cognitive Memory Archiving System</p>
+                </header>
+
+                <div style={styles.authContainer}>
+                    {showAuthForm === 'login' ? (
+                        <LoginForm onToggleForm={() => setShowAuthForm('register')} />
+                    ) : (
+                        <RegisterForm onToggleForm={() => setShowAuthForm('login')} />
+                    )}
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div style={styles.container}>
-            {/* Background Bubbles */}
             <div style={styles.bubble1}></div>
             <div style={styles.bubble2}></div>
             <div style={styles.bubble3}></div>
 
-            {/* Header */}
+            <div style={styles.userInfo}>
+                <span style={styles.userName}>Welcome, {user.name}</span>
+                <button style={styles.logoutButton} onClick={logout}>
+                    Logout
+                </button>
+            </div>
+
             <header style={styles.header}>
                 <h1 style={styles.title}>NeuroSync <span style={styles.betaTag}>BETA</span></h1>
                 <p style={styles.subtitle}>Cognitive Memory Archiving System</p>
             </header>
 
-            {/* Dashboard */}
             <div style={styles.dashboard}>
-                {/* Sidebar */}
                 <nav style={styles.sidebar}>
                     <button
                         onClick={() => setView('upload')}
@@ -383,42 +437,27 @@ function App() {
                         </div>
                     </button>
 
-                    {/* Status Panel */}
                     <div style={styles.statusPanel}>
                         <div style={styles.statusHeader}>SYSTEM STATUS</div>
                         <div style={styles.statusItem}>
-                            <div style={
-                                systemStatus === 'online' ? styles.statusIndicator :
-                                systemStatus === 'offline' ? styles.statusIndicatorOffline :
-                                styles.statusIndicatorChecking
-                            }></div>
-                            <div>Neural Network: <span style={styles.statusValue}>
-                                {systemStatus === 'online' ? 'Online' : 
-                                 systemStatus === 'offline' ? 'Offline' : 'Checking...'}
-                            </span></div>
+                            <div style={styles.statusIndicator}></div>
+                            <div>Neural Network: <span style={styles.statusValue}>Online</span></div>
                         </div>
                         <div style={styles.statusItem}>
                             <div style={styles.statusIndicator}></div>
-                            <div>Memory Bank: <span style={styles.statusValue}>
-                                {memoryCount} memories
-                            </span></div>
+                            <div>Memory Bank: <span style={styles.statusValue}>{memoryCount} memories</span></div>
                         </div>
                         <div style={styles.statusItem}>
                             <div style={styles.statusIndicator}></div>
-                            <div>Total Duration: <span style={styles.statusValue}>
-                                {formatDuration(stats.totalDuration)}
-                            </span></div>
+                            <div>Total Duration: <span style={styles.statusValue}>{formatDuration(stats.totalDuration)}</span></div>
                         </div>
                         <div style={styles.statusItem}>
                             <div style={styles.statusIndicator}></div>
-                            <div>Languages: <span style={styles.statusValue}>
-                                {stats.languages.length}
-                            </span></div>
+                            <div>Languages: <span style={styles.statusValue}>{stats.languages.length}</span></div>
                         </div>
                     </div>
                 </nav>
 
-                {/* Content Area */}
                 <div style={styles.content}>
                     <div style={styles.contentHeader}>
                         <div style={styles.currentModule}>
@@ -447,7 +486,6 @@ function App() {
                 </div>
             </div>
 
-            {/* Footer */}
             <footer style={styles.footer}>
                 <div>Memory Augmentation Platform v2.0</div>
                 <div>{new Date().toLocaleDateString()} | {currentTime}</div>
@@ -455,6 +493,10 @@ function App() {
             </footer>
         </div>
     );
+}
+
+function App() {
+    return <AppContent />;
 }
 
 export default App;

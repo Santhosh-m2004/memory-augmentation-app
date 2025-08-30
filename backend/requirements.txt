@@ -1,5 +1,20 @@
+# Flask
+# flask-cors
+# pymongo
+# openai-whisper
+# opencv-python
+# Pillow
+# nltk
+# librosa
+# torch
+# torchaudio
+# requests
+# googletrans
+
 Flask
 flask-cors
+flask-bcrypt
+flask-jwt-extended
 pymongo
 openai-whisper
 opencv-python
@@ -10,3 +25,5 @@ torch
 torchaudio
 requests
 googletrans
+python-dotenv
+bcrypt

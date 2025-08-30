@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { searchMemory, getAllMemories, deleteMemory, getMemoryStats } from './api';
+import { searchMemory, getAllMemories, deleteMemory } from './api';
+import { useAuth } from './AuthContext';
 
 // Comprehensive language code to full name mapping
 const LANGUAGE_MAP = {
@@ -119,6 +120,7 @@ function MemorySearch() {
   const [viewMode, setViewMode] = useState('grid');
   const [currentFrameIndex, setCurrentFrameIndex] = useState(0);
   const [fullScreenImage, setFullScreenImage] = useState(false);
+  const { token } = useAuth();
 
   const handleSearch = async () => {
     if (query.length < 2) {
@@ -129,7 +131,7 @@ function MemorySearch() {
     setLoading(true);
     setError('');
     try {
-      const results = await searchMemory(query);
+      const results = await searchMemory(query, token);
       setMemories(results);
     } catch (err) {
       setError(err.message || 'Failed to search memories.');
@@ -141,7 +143,7 @@ function MemorySearch() {
     setLoading(true);
     setError('');
     try {
-      const allMemories = await getAllMemories();
+      const allMemories = await getAllMemories(token);
       setMemories(allMemories);
     } catch (err) {
       setError(err.message || 'Failed to load memories.');
@@ -151,10 +153,40 @@ function MemorySearch() {
   
   const loadStats = async () => {
     try {
-      const statsData = await getMemoryStats();
+      const statsData = await calculateStatsFromMemories();
       setStats(statsData);
     } catch (err) {
       console.error('Failed to load stats:', err);
+    }
+  };
+
+  const calculateStatsFromMemories = async () => {
+    try {
+      const memories = await getAllMemories(token);
+      
+      const totalDuration = memories.reduce((sum, memory) => sum + (memory.duration || 0), 0);
+      const languageCount = {};
+      
+      memories.forEach(memory => {
+        const lang = memory.detected_language || 'unknown';
+        languageCount[lang] = (languageCount[lang] || 0) + 1;
+      });
+      
+      return {
+        total: memories.length,
+        totalDuration,
+        languages: Object.keys(languageCount).map(lang => ({
+          language: lang,
+          count: languageCount[lang]
+        }))
+      };
+    } catch (error) {
+      console.error('Failed to calculate stats:', error);
+      return {
+        total: 0,
+        totalDuration: 0,
+        languages: []
+      };
     }
   };
 
@@ -166,7 +198,7 @@ function MemorySearch() {
     setLoading(true);
     setError('');
     try {
-      await deleteMemory(id);
+      await deleteMemory(id, token);
       loadAllMemories(); // refresh list
       loadStats(); // refresh stats
     } catch (err) {
@@ -178,7 +210,7 @@ function MemorySearch() {
   useEffect(() => {
     loadAllMemories();
     loadStats();
-  }, []);
+  }, [token]);
 
   const formatDuration = (seconds) => {
     if (!seconds) return '0s';
@@ -233,6 +265,19 @@ function MemorySearch() {
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [fullScreenImage, selectedMemory]);
+
+  // Function to get a flag emoji based on language (simplified)
+  const getLanguageFlag = (languageCode) => {
+    const flagMap = {
+      'en': '🇺🇸', 'es': '🇪🇸', 'fr': '🇫🇷', 'de': '🇩🇪', 'it': '🇮🇹', 'pt': '🇵🇹', 'ru': '🇷🇺',
+      'zh': '🇨🇳', 'ja': '🇯🇵', 'ko': '🇰🇷', 'ar': '🇸🇦', 'hi': '🇮🇳', 'bn': '🇧🇩', 'te': '🇮🇳',
+      'mr': '🇮🇳', 'ta': '🇮🇳', 'ur': '🇵🇰', 'gu': '🇮🇳', 'kn': '🇮🇳', 'ml': '🇮🇳', 'pa': '🇮🇳',
+      'th': '🇹🇭', 'vi': '🇻🇳', 'id': '🇮🇩', 'tr': '🇹🇷', 'nl': '🇳🇱', 'sv': '🇸🇪', 'pl': '🇵🇱',
+      // Add more flag mappings as needed
+    };
+    
+    return flagMap[languageCode] || '🌐';
+  };
 
   const styles = {
     container: {
@@ -400,12 +445,12 @@ function MemorySearch() {
       color: '#ff6464',
     },
     modal: {
-      position: 'fixed',
-      top: 0,
+      position:'fixed',
+      top: 300,
       left: 0,
       right: 0,
       bottom: 0,
-      background: 'rgba(0, 0, 0, 0.8)',
+      background: 'rgba(0, 0, 0, 0)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -450,6 +495,15 @@ function MemorySearch() {
       marginBottom: '1.5rem',
       lineHeight: '1.6',
       color: '#c0c0e0',
+    },
+    modalSummary: {
+      background: 'rgba(65, 105, 225, 0.1)',
+      padding: '1.5rem',
+      borderRadius: '8px',
+      marginBottom: '1.5rem',
+      lineHeight: '1.6',
+      color: '#c0c0e0',
+      borderLeft: '4px solid #4169e1',
     },
     modalFrames: {
       display: 'flex',
@@ -613,28 +667,6 @@ function MemorySearch() {
       padding: '3rem',
       color: '#a0a0e0',
     },
-                modalSummary: {
-                background: 'rgba(65, 105, 225, 0.1)',
-                padding: '1.5rem',
-                borderRadius: '8px',
-                marginBottom: '1.5rem',
-                lineHeight: '1.6',
-                color: '#c0c0e0',
-                borderLeft: '4px solid #4169e1',
-                }
-  };
-
-  // Function to get a flag emoji based on language (simplified)
-  const getLanguageFlag = (languageCode) => {
-    const flagMap = {
-      'en': '🇺🇸', 'es': '🇪🇸', 'fr': '🇫🇷', 'de': '🇩🇪', 'it': '🇮🇹', 'pt': '🇵🇹', 'ru': '🇷🇺',
-      'zh': '🇨🇳', 'ja': '🇯🇵', 'ko': '🇰🇷', 'ar': '🇸🇦', 'hi': '🇮🇳', 'bn': '🇧🇩', 'te': '🇮🇳',
-      'mr': '🇮🇳', 'ta': '🇮🇳', 'ur': '🇵🇰', 'gu': '🇮🇳', 'kn': '🇮🇳', 'ml': '🇮🇳', 'pa': '🇮🇳',
-      'th': '🇹🇭', 'vi': '🇻🇳', 'id': '🇮🇩', 'tr': '🇹🇷', 'nl': '🇳🇱', 'sv': '🇸🇪', 'pl': '🇵🇱',
-      // Add more flag mappings as needed
-    };
-    
-    return flagMap[languageCode] || '🌐';
   };
 
   return (
@@ -791,9 +823,9 @@ function MemorySearch() {
             </div>
             <div style={styles.modalBody}>
               <div style={styles.languageInfo}>
-                <span style={styles.languageFlag}>{getLanguageFlag(selectedMemory.detected_language)}</span>
                 <span style={styles.languageText}>
-                  Detected Language: {getLanguageName(selectedMemory.detected_language)}
+                  Transcript Language: English
+
                 </span>
               </div>
               
@@ -806,17 +838,15 @@ function MemorySearch() {
               <div style={styles.modalTranscript}>
                 {selectedMemory.translated_transcript || selectedMemory.transcript || 'No transcript available'}
               </div>
-
-                {selectedMemory.summary && (
+              
+              {selectedMemory.summary && (
                 <>
-                    <h3>AI Summary</h3>
-                    <div style={styles.modalSummary}>
+                  <h3>AI Summary</h3>
+                  <div style={styles.modalSummary}>
                     {selectedMemory.summary}
-                    </div>
+                  </div>
                 </>
-                )}
-
-                
+              )}
               
               {selectedMemory.keyframes && selectedMemory.keyframes.length > 0 && (
                 <>

@@ -3,23 +3,25 @@ from bson import ObjectId
 from googletrans import Translator
 from datetime import datetime
 import os
+from dotenv import load_dotenv
 
-# Database setup
-client = MongoClient('mongodb://localhost:27017/')
+load_dotenv()
+
+# MongoDB Atlas connection
+client = MongoClient(os.environ.get('MONGO_ATLAS_URI', 'mongodb://localhost:27017/'))
 db = client['memory_db']
 collection = db['memories']
 
 # Create indexes for better search performance
-collection.create_index([("transcript", "text"), ("translated_transcript", "text")])
-collection.create_index("upload_date")
+collection.create_index([("user_id", 1), ("upload_date", -1)])
+collection.create_index([("user_id", 1), ("transcript", "text"), ("translated_transcript", "text")])
 
 # Translator setup
 translator = Translator()
 
-def save_memory(filepath, transcript, summary, keyframes):
+def save_memory(filepath, transcript, summary, keyframes, user_id):
     """
-    Save a memory into the database.
-    Automatically translates transcript into English and stores both original and translated versions.
+    Save a memory into the database with user association.
     """
     # Ensure transcript is string
     transcript = str(transcript)
@@ -45,29 +47,32 @@ def save_memory(filepath, transcript, summary, keyframes):
         "translated_transcript": translated_transcript,
         "detected_language": detected_language,
         "keyframes": keyframes,
+        "user_id": user_id,
         "upload_date": datetime.now(),
         "duration": len(transcript.split()) // 3  # Approximate duration in seconds (3 words per second)
     }
 
     result = collection.insert_one(memory)
-
-    print(f"[Memory Store] Memory saved with ID: {result.inserted_id}")
+    print(f"[Memory Store] Memory saved with ID: {result.inserted_id} for user: {user_id}")
     return result.inserted_id
 
-def search_memory(query):
+def search_memory(query, user_id):
     """
-    Search for memories by matching query with original and translated transcripts.
-    Supports text search and returns results by relevance.
+    Search for memories by matching query with user's content only.
     """
-    # Use MongoDB text search if available
     try:
+        # Use MongoDB text search with user filter
         results = collection.find(
-            {"$text": {"$search": query}},
+            {
+                "user_id": user_id,
+                "$text": {"$search": query}
+            },
             {"score": {"$meta": "textScore"}}
         ).sort([("score", {"$meta": "textScore"})])
     except:
-        # Fallback to regex search if text index isn't available
+        # Fallback to regex search with user filter
         results = collection.find({
+            "user_id": user_id,
             "$or": [
                 {"transcript": {"$regex": query, "$options": "i"}},
                 {"translated_transcript": {"$regex": query, "$options": "i"}},
@@ -78,19 +83,26 @@ def search_memory(query):
     memories = []
     for memory in results:
         memory['_id'] = str(memory['_id'])
-        # Calculate relevance score for display
-        if 'score' not in memory:
-            # Simple relevance calculation based on query occurrence
-            text = f"{memory.get('transcript', '')} {memory.get('translated_transcript', '')} {memory.get('summary', '')}"
-            memory['relevance'] = text.lower().count(query.lower()) / len(text) * 100 if text else 0
         memories.append(memory)
 
-    print(f"[Memory Store] Found {len(memories)} memories matching query: '{query}'")
+    print(f"[Memory Store] Found {len(memories)} memories for user {user_id} matching query: '{query}'")
+    return memories
+
+def get_user_memories(user_id):
+    """
+    Fetch all memories for a specific user, sorted by date.
+    """
+    memories = []
+    for memory in collection.find({"user_id": user_id}).sort("upload_date", -1):
+        memory['_id'] = str(memory['_id'])
+        memories.append(memory)
+
+    print(f"[Memory Store] Retrieved {len(memories)} memories for user: {user_id}")
     return memories
 
 def get_all_memories():
     """
-    Fetch all memories from the database, sorted by date.
+    Fetch all memories (admin function - use with caution)
     """
     memories = []
     for memory in collection.find().sort("upload_date", -1):
@@ -100,13 +112,13 @@ def get_all_memories():
     print(f"[Memory Store] Retrieved {len(memories)} total memories.")
     return memories
 
-def delete_memory(memory_id):
+def delete_memory(memory_id, user_id):
     """
-    Delete memory by its unique ID.
+    Delete memory by its unique ID, only if it belongs to the user.
     """
     try:
-        # Get memory first to remove associated files
-        memory = collection.find_one({"_id": ObjectId(memory_id)})
+        # Get memory first to verify ownership and remove associated files
+        memory = collection.find_one({"_id": ObjectId(memory_id), "user_id": user_id})
         if memory:
             # Remove the file from uploads
             if os.path.exists(memory['filepath']):
@@ -118,38 +130,40 @@ def delete_memory(memory_id):
                 if os.path.exists(frame_path):
                     os.remove(frame_path)
         
-        result = collection.delete_one({"_id": ObjectId(memory_id)})
+        result = collection.delete_one({"_id": ObjectId(memory_id), "user_id": user_id})
         if result.deleted_count > 0:
-            print(f"[Memory Store] Memory {memory_id} deleted successfully.")
+            print(f"[Memory Store] Memory {memory_id} deleted successfully by user {user_id}.")
         else:
-            print(f"[Memory Store] Memory {memory_id} not found.")
+            print(f"[Memory Store] Memory {memory_id} not found or access denied for user {user_id}.")
         return result.deleted_count
     except Exception as e:
         print(f"[Memory Store] Error deleting memory {memory_id}: {e}")
         return 0
 
-def get_memory_stats():
+def get_memory_stats(user_id):
     """
-    Get statistics about stored memories.
+    Get statistics about user's stored memories.
     """
-    total_memories = collection.count_documents({})
-    total_duration = collection.aggregate([{
-        "$group": {
+    total_memories = collection.count_documents({"user_id": user_id})
+    total_duration = collection.aggregate([
+        {"$match": {"user_id": user_id}},
+        {"$group": {
             "_id": None,
             "total_duration": {"$sum": "$duration"}
-        }
-    }])
+        }}
+    ])
     
     total_duration = list(total_duration)
     total_duration = total_duration[0]['total_duration'] if total_duration else 0
     
-    # Count by language
-    language_stats = collection.aggregate([{
-        "$group": {
+    # Count by language for this user
+    language_stats = collection.aggregate([
+        {"$match": {"user_id": user_id}},
+        {"$group": {
             "_id": "$detected_language",
             "count": {"$sum": 1}
-        }
-    }])
+        }}
+    ])
     
     return {
         "total_memories": total_memories,
