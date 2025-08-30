@@ -2,7 +2,7 @@
 
 ## Description
 
-AI Memory Augmentation is a full-stack project designed to help users upload and manage their audio or video memories(Has Registration and Login feature). Once uploaded, the system automatically:
+AI Memory Augmentation is a full-stack project designed to help users upload and manage their audio or video memories. Once uploaded, the system automatically:
 
 - Transcribes speech using **OpenAI Whisper** (including language detection and translation to English).
 - Extracts keyframes from videos using **OpenCV**.
