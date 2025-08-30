@@ -2,31 +2,17 @@
 
 ## Description
 
-AI Memory Augmentation is a full-stack project designed to help users upload and manage their audio or video memories. Once uploaded, the system automatically:
+AI Memory Augmentation is a full-stack project designed to help users upload and manage their audio or video memories(Has Registration and Login feature). Once uploaded, the system automatically:
 
 - Transcribes speech using **OpenAI Whisper** (including language detection and translation to English).
 - Extracts keyframes from videos using **OpenCV**.
 - Stores the transcripts and frames in a **MongoDB** database.
+- Gives a summary of the audio (transcript) using AI models, including emotional analysis.
 - Allows users to **search, view, and delete** memories via a simple web interface.
 
 This project combines **React** (Frontend) with **Flask** (Backend) and uses multiple AI tools for processing.
 
 ---
-
-## Features
-
-- Upload audio/video files.
-- Automatic transcription using **Whisper AI**.
-- Automatic language detection and translation to English.
-- Extract important keyframes from videos.
-- Save all data to **MongoDB**.
-- Search memories using keywords.
-- View all memories with their transcriptions and frames.
-- Delete memories.
-- Full-stack application with **React + Flask**.
-
----
-
 ## Tech Stack
 
 ### Frontend
@@ -41,39 +27,6 @@ This project combines **React** (Frontend) with **Flask** (Backend) and uses mul
 
 - MongoDB
 
-### AI Processing
-
-- Transcription: OpenAI Whisper
-- Video Processing: OpenCV
-- Audio Analysis: Librosa
-
----
-
-## Folder Structure
-
-```
-memory-augmentation-app/
-├── backend/
-│   ├── app.py                   
-│   ├── memory_processor/
-│   │   ├── audio_transcriber.py  
-│   │   ├── frame_extractor.py   
-│   │   ├── memory_store.py       
-│
-├── frontend/
-│   ├── src/
-│   │   ├── App.js                
-│   │   ├── api.js                  
-│   │   ├── MemoryUploader.js       
-│   │   ├── MemorySearch.js         
-│
-├── uploads/ 
-├── frames/ 
-├── .gitignore
-├── README.md 
-```
-
----
 
 ## Installation & Setup
 
@@ -116,29 +69,6 @@ npm install
 ```bash
 npm start
 ```
-
----
-
-## Prerequisites
-
-- Python 3.x
-- Node.js
-- MongoDB running locally (on port 27017)
-- OpenAI Whisper model downloaded (`medium` model recommended)
-
----
-
-## API Endpoints
-
-| Method | Endpoint              | Description                                    |
-| ------ | --------------------- | ---------------------------------------------- |
-| POST   | /upload               | Uploads a file (audio/video) and processes it. |
-| GET    | /search?query=...     | Searches memories by transcript content.       |
-| GET    | /memories             | Retrieves all memories.                        |
-| DELETE | /delete/\<memory\_id> | Deletes a specific memory.                     |
-
----
-
 ## Author
 
 **Santhosh M**\
