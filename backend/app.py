@@ -12,6 +12,8 @@ from auth.user_manager import register_user, login_user, get_user_by_id
 import threading
 import requests
 from dotenv import load_dotenv
+from flask_cors import CORS
+
 
 # Load environment variables
 load_dotenv()
