@@ -12,6 +12,34 @@ AI Memory Augmentation is a full-stack project designed to help users upload and
 
 This project combines **React** (Frontend) with **Flask** (Backend) and uses multiple AI tools for processing.
 
+## Screenshots
+
+### Authentication Pages
+**Sign In Page**  
+![Sign In](./images/signin.png)
+
+**Sign Up Page**  
+![Sign Up](./images/signup.png)
+
+---
+
+### Dashboard Pages
+**Dashboard - Overview**  
+![Dashboard 1](./images/dashboard1.png)
+
+**Dashboard - Analytics**  
+![Dashboard 2](./images/dashboard2.png)
+
+**Dashboard - Memory Search**  
+![Dashboard 3](./images/dashboard3.png)
+
+**Dashboard - Keyframe View**  
+![Dashboard 4](./images/dashboard4.png)
+
+**Dashboard - Emotional Insights**  
+![Dashboard 5](./images/dashboard5.png)
+
+
 ---
 ## Tech Stack
 
